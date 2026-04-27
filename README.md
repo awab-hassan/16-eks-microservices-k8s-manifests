@@ -1,6 +1,6 @@
 # MS Platform — Kubernetes Manifests + MySQL RDS + ECR Audit
 
-The consolidated deployment monorepo for the **MS platform** — a Spring-Boot / Actuator-based microservice stack running on **Kubernetes** in **eu-west-2 (London)** and pulling container images from a private **ECR registry**. This folder is the centre of gravity for the MS platform: six microservice deployments, their services, a Horizontal Pod Autoscaler, a Redis cache, the RDS IaC, and the Python helper that inventories ECR so engineers know which image tag to pin.
+The consolidated deployment monorepo for the **MS platform** — a Spring-Boot / Actuator-based microservice stack running on **Kubernetes** in **eu-west-2 (London)** and pulling container images from a private **ECR registry**. This folder is the centre of gravity for the MS platform: six microservice deployments, their services, a Horizontal Pod Autoscaler, a Redis cache and the Python helper that inventories ECR so engineers know which image tag to pin.
 
 ## Highlights
 
@@ -9,7 +9,6 @@ The consolidated deployment monorepo for the **MS platform** — a Spring-Boot /
 - **Graceful shutdown** — every pod has a `preStop: sleep 20–60s` + `terminationGracePeriodSeconds` so in-flight requests drain before SIGTERM.
 - **Dual-registry reality** — most images come from ECR (`975050035051.dkr.ecr.eu-west-2.amazonaws.com/backend/*:latest`); the legacy websocket service still pulls from GCR (`gcr.io/in-app-1278/...`). Captured as-is to match what's actually running.
 - **HPA on `ms-live`** — CPU-driven autoscaler (min 4, max 6, `targetAverageUtilization: 350%`) for the main user-facing server.
-- **MySQL 8.0 on RDS, hardened parameter group** — custom `innodb_buffer_pool_size`, `innodb_log_file_size`, `max_allowed_packet`, strict `sql_mode` — not the stock AWS defaults.
 - **ECR audit helper** — `python-scripts-for-automation/ecr.py` paginates every ECR repo in the region and prints a copy-pasteable `<repo>.dkr.ecr.eu-west-2.amazonaws.com/<repo>:<tag>` line for each image, so the image reference you put in the next deployment is always correct.
 
 ## Services overview
@@ -27,7 +26,6 @@ Plus the infra sidecars:
 
 | Folder | What it is |
 |---|---|
-| `mysql-terraform/` | Terraform for the backing MySQL 8.0 RDS instance (`ms-dev`) with custom parameter group, subnet group, and SG locked to the VPC CIDR |
 | `python-scripts-for-automation/` | `ecr.py` — boto3 ECR image inventory helper |
 
 ## Architecture
@@ -45,15 +43,7 @@ Plus the infra sidecars:
                  │   ms-data-migration (16 vCPU / 32 GB, batch)                                │
                  └──────┬───────────────────────────────────────────────────────────────────────┘
                         │
-                        ▼ MySQL 3306 (ingress only from VPC 10.0.0.0/16)
-                 ┌─────────────────────────────┐
-                 │ RDS mysql 8.0  "ms-dev"    │
-                 │ custom parameter group      │
-                 │   innodb_buffer_pool=2G     │
-                 │   innodb_log_file=1G        │
-                 │   strict sql_mode           │
-                 └─────────────────────────────┘
-
+                        ▼
                  ECR repos in eu-west-2:  (inventoried by ecr.py)
                    backend/main-server            backend/integrations
                    backend/sms-email-notifications-server   backend/data-migration
@@ -64,10 +54,9 @@ Plus the infra sidecars:
 
 - **Orchestration:** Kubernetes (`apps/v1`, `autoscaling/v2beta1`)
 - **Application:** Spring Boot (Actuator `/actuator/health`), Java runtime (inferred from image names / health endpoints)
-- **Data:** MySQL 8.0 on RDS (Terraform-provisioned), Redis (in-cluster cache)
 - **Image registry:** AWS ECR + one legacy GCR image
 - **Cloud:** AWS `eu-west-2` (London)
-- **Tooling:** Terraform, boto3
+- **Tooling:** boto3
 
 ## Repository layout
 
@@ -95,9 +84,6 @@ AC-DEPLOYMENTS/
 ├── redis-deployments/
 │   ├── deployment.yaml              # redis:latest, ClusterIP
 │   └── service.yaml
-├── mysql-terraform/
-│   ├── main.tf                      # SG + Parameter Group + Subnet Group + RDS instance
-│   └── variables.tf                 # db_username, db_password (sensitive)
 └── python-scripts-for-automation/
     └── ecr.py                       # inventory every ECR repo+tag in the region
 ```
@@ -123,7 +109,6 @@ Copy-paste the line for the tag you want into the `image:` field of a Deployment
 ## Prerequisites
 
 - `kubectl` pointed at the target cluster with RBAC to the `backend` and `redis` namespaces
-- Terraform >= 1.x + AWS CLI with permissions in `eu-west-2` (`rds:*`, `ec2:*`, `iam:*`)
 - Python 3 with `boto3` (for `ecr.py`)
 - A Kubernetes Secret `slack-secrets` in namespace `backend` with key `bot-token` (referenced by `ms-smsemail` Deployment); create with:
 
@@ -131,42 +116,6 @@ Copy-paste the line for the tag you want into the `image:` field of a Deployment
   kubectl -n backend create secret generic slack-secrets \
     --from-literal=bot-token="$SLACK_BOT_TOKEN"
   ```
-
-## Deployment
-
-```bash
-# 1. Bring up the RDS (first time)
-cd mysql-terraform
-export TF_VAR_db_password="$(pbpaste)"   # or keep in terraform.tfvars (gitignored)
-terraform init
-terraform apply
-
-# 2. Apply every service
-cd ..
-for svc in ms-live ms-server_websocket-master accounting-master \
-           ms-smsemail-master/kubernetes-sandbox kubernetes-data-migration-sandbox \
-           redis-deployments; do
-  kubectl apply -f "$svc/"
-done
-
-# 3. Verify
-kubectl -n backend get deploy,svc,hpa
-kubectl -n redis   get deploy,svc
-```
-
-## Teardown
-
-```bash
-kubectl delete -f <svc>/               # per service
-cd mysql-terraform && terraform destroy
-```
-
-## Security notes
-
-- ⚠️ **Sanitised:** `ms-smsemail-master/kubernetes-sandbox/kubernetes.yaml` used to have a **hardcoded Slack bot token** (`xoxb-…`) in an env var. It now reads from a `secretKeyRef → slack-secrets.bot-token`. The original is preserved under `_DO_NOT_COMMIT_QUARANTINE/ac-deployments-smsemail-sandbox-kubernetes.yaml.ORIGINAL`. **Rotate the Slack token in the Slack app admin immediately.**
-- ⚠️ **Sanitised:** `mysql-terraform/main.tf` used to have a **hardcoded RDS master password** (`MnBvCxZ_123!`). It now reads from `var.db_password` (marked `sensitive`). The original is in the quarantine folder. **Rotate the RDS master password now.**
-- RDS `publicly_accessible = true` — this is a dev/sandbox default. Flip to `false` and attach a VPC-peered bastion for prod.
-- `GOOGLE_APPLICATION_CREDENTIALS` envs in `ms-live/` and `ms-smsemail-master/` point to GCP service-account JSONs baked into the container image at `main/resources/…`. Those JSONs should live in a Kubernetes Secret mounted as a file, not in the image.
 
 ## Notes
 
