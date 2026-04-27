@@ -1,0 +1,17 @@
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+  name: ms-live-autoscaler
+  namespace: backend
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ms-live
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 350

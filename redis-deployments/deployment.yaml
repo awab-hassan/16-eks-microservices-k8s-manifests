@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+ #         resources:
+  #          limits:
+   #           memory: "256Mi"
+    #          cpu: "500m"
+     #       requests:
+      #        memory: "128Mi"
+       #       cpu: "250m"
+          # Optional: Configure Redis with a custom config file
+          # volumeMounts:
+          #   - name: redis-config
+          #     mountPath: /usr/local/etc/redis/redis.conf
+          #     subPath: redis.conf
+      # Optional: Configure a ConfigMap for custom Redis configuration
+      # volumes:
+      #   - name: redis-config
+      #     configMap:
+      #       name: redis-config

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-integration
+    release: ms-integration
+  name: ms-integration-service
+  namespace: backend
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 443
+  selector:
+    app: ms-integration
+    release: ms-integration
+  sessionAffinity: None
+  type: LoadBalancer

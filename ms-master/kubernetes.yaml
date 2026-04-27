@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-integration
+    release: ms-integration
+  name: ms-integration
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-integration
+      release: ms-integration
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 100%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ms-integration
+        release: ms-integration
+    spec:
+      containers:
+        - image: xxx.dkr.ecr.eu-west-2.amazonaws.com/xxx/xxx:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 2.0
+              memory: 4G
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /integration/actuator/health
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: ms-integration
+          ports:
+            - containerPort: 443
+              name: https
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /integration/actuator/health
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 105
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: ms-integration
+          ports:
+            - containerPort: 443
+              name: https
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /integration/actuator/health
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 105
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 20" ]
+          terminationGracePeriodSeconds: 20

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-data-migration
+    release: ms-data-migration
+  name: ms-data-migration-service
+  namespace: backend
+spec:
+  clusterIP: xxx
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 30579
+      port: 443
+      protocol: TCP
+      targetPort: 443
+  selector:
+    app: ms-data-migration
+    release: ms-data-migration
+  sessionAffinity: None
+  type: LoadBalancer

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-live
+    release: ms-live
+  name: ms-live
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-live
+      release: ms-live
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ms-live
+        release: ms-live
+    spec:
+      containers:
+        - image: xxx.dkr.ecr.eu-west-2.amazonaws.com/xxx/xxx:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"  # Corrected unit
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: ms-live
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 65
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: xxx.json
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 20" ]
+      
+      terminationGracePeriodSeconds: 20

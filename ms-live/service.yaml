@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-live
+    release: ms-live
+  name: ms-live-service
+  namespace: backend
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 30577
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: ms-live
+    release: ms-live
+  sessionAffinity: None
+  type: LoadBalancer
