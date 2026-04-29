@@ -1,4 +1,4 @@
-# eks-microservices-k8s-manifests
+# EKS-Microservices-k8s-manifests
 
 Kubernetes deployment manifests for a Spring Boot microservice platform running on EKS in `eu-west-2`. Covers six microservice deployments, a Redis cache, a Horizontal Pod Autoscaler, and a Python helper for ECR image inventory.
 
