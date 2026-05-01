@@ -1,6 +1,6 @@
 # EKS-Microservices-k8s-manifests
 
-Kubernetes deployment manifests for a Spring Boot microservice platform running on EKS in `eu-west-2`. Covers six microservice deployments, a Redis cache, a Horizontal Pod Autoscaler, and a Python helper for ECR image inventory.
+This project is a microservices-based architecture deployed on Amazon EKS, where external traffic is routed through an Application Load Balancer to Kubernetes Ingress and internal services. Each service is exposed via a ClusterIP service and runs on scalable deployments, with HPA applied to ms-live to handle dynamic user traffic efficiently. A dedicated batch job handles data migration tasks asynchronously without impacting live services. Redis is deployed separately (ideally as a StatefulSet with persistent storage) to support caching and fast data access. The system is designed for scalability, isolation, and high availability within a cloud-native environment.
 
 ## Services
 
