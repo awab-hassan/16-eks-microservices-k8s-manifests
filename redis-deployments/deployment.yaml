@@ -1,11 +1,10 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: redis-deployment
+  name: redis
   namespace: redis
-  labels:
-    app: redis
 spec:
+  serviceName: redis
   replicas: 1
   selector:
     matchLabels:
@@ -20,20 +19,22 @@ spec:
           image: redis:latest
           ports:
             - containerPort: 6379
- #         resources:
-  #          limits:
-   #           memory: "256Mi"
-    #          cpu: "500m"
-     #       requests:
-      #        memory: "128Mi"
-       #       cpu: "250m"
-          # Optional: Configure Redis with a custom config file
-          # volumeMounts:
-          #   - name: redis-config
-          #     mountPath: /usr/local/etc/redis/redis.conf
-          #     subPath: redis.conf
-      # Optional: Configure a ConfigMap for custom Redis configuration
-      # volumes:
-      #   - name: redis-config
-      #     configMap:
-      #       name: redis-config
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+          # Optional resources
+          # resources:
+          #   limits:
+          #     memory: "256Mi"
+          #     cpu: "500m"
+          #   requests:
+          #     memory: "128Mi"
+          #     cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
