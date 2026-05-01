@@ -11,7 +11,7 @@ This project is a microservices-based architecture deployed on Amazon EKS, where
 | `ms-integration` | ECR `backend/integrations:latest` | 443 | `backend` | Accounting/integrations. 2 vCPU, 4 GB |
 | `ms-sandbox-smsemail` | ECR `backend/sms-email-notifications-server:latest` | 8585 | `backend` | SMS and email notifications (sandbox) |
 | `ms-data-migration` | ECR `backend/data-migration:latest` | 443 | `backend` | Batch job. 16 vCPU, 32 GB requested |
-| `redis-deployment` | `redis:latest` | 6379 | `redis` | ClusterIP, single replica. Cache only |
+| `redis-deployment` | `redis:latest` | 6379 | `redis` | 
 
 ## Architecture
 
